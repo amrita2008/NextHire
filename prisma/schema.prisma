@@ -1,0 +1,256 @@
+// Prisma Schema for AI-Powered ATS Hackathon App
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  CANDIDATE
+  RECRUITER
+  HIRING_MANAGER
+  INTERVIEWER
+  ADMIN
+}
+
+enum ApplicationStage {
+  APPLIED
+  SCREENING
+  SHORTLISTED
+  TECH_INTERVIEW
+  HR_INTERVIEW
+  OFFER
+  HIRED
+  REJECTED
+}
+
+enum JobStatus {
+  DRAFT
+  OPEN
+  CLOSED
+}
+
+enum WorkMode {
+  REMOTE
+  HYBRID
+  ON_SITE
+}
+
+enum EmploymentType {
+  FULL_TIME
+  PART_TIME
+  CONTRACT
+  INTERNSHIP
+}
+
+enum OfferStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+model User {
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  email           String   @unique
+  passwordHash    String?
+  name            String
+  role            Role     @default(CANDIDATE)
+  isEmailVerified Boolean  @default(false)
+  avatarUrl       String?
+  companyId       String?  @db.ObjectId
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  company            Company?             @relation(fields: [companyId], references: [id])
+  candidateProfile   CandidateProfile?
+  postedJobs         Job[]                @relation("CreatedJobs")
+  assignedInterviews Interview[]          @relation("InterviewerAssigned")
+  feedbacksSubmitted InterviewFeedback[]
+  assessmentAttempts AssessmentAttempt[]
+  notifications      Notification[]
+  auditLogs          AuditLog[]
+}
+
+model Company {
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  name            String
+  logo            String?
+  website         String?
+  industry        String?
+  companySize     String?
+  description     String?
+  officeLocations String[]
+  createdAt       DateTime @default(now())
+
+  users User[]
+  jobs  Job[]
+}
+
+model CandidateProfile {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId         String   @unique @db.ObjectId
+  phone          String?
+  location       String?
+  bio            String?
+  education      String[]
+  experience     String[]
+  skills         String[]
+  certifications String[]
+  portfolioUrl   String?
+  githubUrl      String?
+  linkedinUrl    String?
+  resumeUrl      String?
+  resumeText     String?
+  coverLetterUrl String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  applications Application[]
+}
+
+model Job {
+  id                 String         @id @default(auto()) @map("_id") @db.ObjectId
+  companyId          String         @db.ObjectId
+  createdById        String         @db.ObjectId
+  title              String
+  department         String
+  location           String
+  salaryMin          Int?
+  salaryMax          Int?
+  currency           String         @default("USD")
+  experienceRequired String
+  skillsRequired     String[]
+  employmentType     EmploymentType @default(FULL_TIME)
+  workMode           WorkMode       @default(HYBRID)
+  deadline           DateTime?
+  description        String
+  status             JobStatus      @default(OPEN)
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+
+  company          Company            @relation(fields: [companyId], references: [id])
+  createdBy        User               @relation("CreatedJobs", fields: [createdById], references: [id])
+  applications     Application[]
+  codingAssessments CodingAssessment[]
+}
+
+model Application {
+  id           String           @id @default(auto()) @map("_id") @db.ObjectId
+  jobId        String           @db.ObjectId
+  candidateId  String           @db.ObjectId
+  stage        ApplicationStage @default(APPLIED)
+  matchScore   Int?
+  matchDetails String?
+  notes        String?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  job                Job                 @relation(fields: [jobId], references: [id])
+  candidate          CandidateProfile    @relation(fields: [candidateId], references: [id])
+  interviews         Interview[]
+  offerLetter        OfferLetter?
+  assessmentAttempts AssessmentAttempt[]
+}
+
+model Interview {
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  applicationId   String   @db.ObjectId
+  interviewerId   String   @db.ObjectId
+  title           String
+  scheduledAt     DateTime
+  durationMinutes Int      @default(45)
+  meetingUrl      String?
+  status          String   @default("SCHEDULED")
+  createdAt       DateTime @default(now())
+
+  application Application         @relation(fields: [applicationId], references: [id])
+  interviewer User                @relation("InterviewerAssigned", fields: [interviewerId], references: [id])
+  feedbacks   InterviewFeedback[]
+}
+
+model InterviewFeedback {
+  id                    String   @id @default(auto()) @map("_id") @db.ObjectId
+  interviewId           String   @db.ObjectId
+  interviewerId         String   @db.ObjectId
+  technicalRating       Int
+  communicationRating   Int
+  problemSolvingRating Int
+  overallRating         Int
+  comments              String
+  createdAt             DateTime @default(now())
+
+  interview   Interview @relation(fields: [interviewId], references: [id])
+  interviewer User      @relation(fields: [interviewerId], references: [id])
+}
+
+model CodingAssessment {
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  jobId           String   @db.ObjectId
+  title           String
+  durationMinutes Int      @default(60)
+  passPercentage  Int      @default(70)
+  questionsJson   String
+  createdAt       DateTime @default(now())
+
+  job      Job                 @relation(fields: [jobId], references: [id])
+  attempts AssessmentAttempt[]
+}
+
+model AssessmentAttempt {
+  id               String   @id @default(auto()) @map("_id") @db.ObjectId
+  assessmentId     String   @db.ObjectId
+  candidateUserId  String   @db.ObjectId
+  applicationId    String?  @db.ObjectId
+  score            Int
+  passed           Boolean  @default(false)
+  answersJson      String
+  tabSwitchesCount Int      @default(0)
+  submittedAt      DateTime @default(now())
+
+  assessment  CodingAssessment @relation(fields: [assessmentId], references: [id])
+  candidate   User             @relation(fields: [candidateUserId], references: [id])
+  application Application?     @relation(fields: [applicationId], references: [id])
+}
+
+model OfferLetter {
+  id            String      @id @default(auto()) @map("_id") @db.ObjectId
+  applicationId String      @unique @db.ObjectId
+  role          String
+  salary        Int
+  joiningDate   DateTime
+  location      String
+  benefits      String
+  status        OfferStatus @default(PENDING)
+  createdAt     DateTime    @default(now())
+
+  application Application @relation(fields: [applicationId], references: [id])
+}
+
+model Notification {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  title     String
+  message   String
+  type      String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model AuditLog {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String?  @db.ObjectId
+  action    String
+  entity    String
+  entityId  String?
+  details   String?
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id])
+}
