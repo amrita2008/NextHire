@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyJwtToken } from '@/lib/auth';
-import prisma from '@/lib/prisma';
+import { prisma } from '@/lib/db';
 import { join } from 'path';
 import { readFile } from 'fs/promises';
 import pdfParse from 'pdf-parse';
