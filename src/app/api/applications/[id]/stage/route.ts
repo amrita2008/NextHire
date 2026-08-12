@@ -4,7 +4,7 @@ import { prisma } from '@/lib/db';
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const token = req.cookies.get('token')?.value || req.headers.get('authorization')?.replace('Bearer ', '');
@@ -14,6 +14,7 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized role access' }, { status: 403 });
     }
 
+    const { id } = await params;
     const { stage } = await req.json();
     const validStages = [
       'APPLIED',
@@ -31,7 +32,7 @@ export async function PATCH(
     }
 
     const application = await prisma.application.update({
-      where: { id: params.id },
+      where: { id },
       data: { stage },
     });
 
