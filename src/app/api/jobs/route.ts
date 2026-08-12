@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
       where,
       include: {
         company: {
-          select: { name: true, logo: true, website: true, location: true },
+          select: { name: true, logo: true, website: true, officeLocations: true },
         },
       },
       orderBy: { createdAt: 'desc' },
