@@ -2,10 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { verifyJwtToken } from '@/lib/auth';
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
+    const { id } = await params;
     const job = await prisma.job.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         company: true,
         createdBy: {
@@ -31,8 +35,12 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   }
 }
 
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
+    const { id } = await params;
     const token = req.cookies.get('token')?.value || req.headers.get('authorization')?.replace('Bearer ', '');
     const userPayload = token ? verifyJwtToken(token) : null;
 
@@ -43,7 +51,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     const body = await req.json();
 
     const updatedJob = await prisma.job.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         ...body,
         updatedAt: new Date(),
@@ -56,8 +64,12 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   }
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
+    const { id } = await params;
     const token = req.cookies.get('token')?.value || req.headers.get('authorization')?.replace('Bearer ', '');
     const userPayload = token ? verifyJwtToken(token) : null;
 
@@ -66,7 +78,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     }
 
     await prisma.job.delete({
-      where: { id: params.id },
+      where: { id },
     });
 
     return NextResponse.json({ message: 'Job deleted successfully' });
