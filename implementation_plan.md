@@ -133,7 +133,7 @@ To simulate authentic, high-quality human development over 2 days while satisfyi
   - Dynamic offer letter creation from templates. Candidate can accept, reject, or download PDF.
 
 #### **Phase 9: Analytics Dashboard, Admin Controls & Final Package**
-- [ ] **Commit 23:** `feat(analytics): build Recruiter & Admin Analytics dashboard charts (funnel, time-to-hire)`
+- [x] **Commit 23:** `feat(analytics): build Recruiter & Admin Analytics dashboard charts (funnel, time-to-hire)`
   - Visual charts for applicant conversion rate, time-to-hire, offer acceptance rate.
 - [ ] **Commit 24:** `feat(admin): build Admin Control Panel for user role management and audit logs`
   - Full system management and security audit trail.

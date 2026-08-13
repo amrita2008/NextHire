@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Sparkles, User, LogOut, Briefcase, LayoutDashboard, Menu, X, Sun, Moon, Calendar, Code2, FileText } from 'lucide-react';
+import { Sparkles, User, LogOut, Briefcase, LayoutDashboard, Menu, X, Sun, Moon, Calendar, Code2, FileText, BarChart3 } from 'lucide-react';
 
 export default function Navbar() {
   const router = useRouter();
@@ -83,6 +83,16 @@ export default function Navbar() {
 
           {user ? (
             <div className="flex items-center gap-3">
+              {(user.role === 'RECRUITER' || user.role === 'ADMIN' || user.role === 'HIRING_MANAGER') && (
+                <Link
+                  href="/dashboard/recruiter/analytics"
+                  className="px-3 py-2 rounded-xl text-xs font-semibold bg-slate-900 border border-slate-800 text-slate-300 hover:text-white hover:border-slate-700 flex items-center gap-1.5 transition-all"
+                  title="Recruitment Analytics Command Center"
+                >
+                  <BarChart3 className="w-3.5 h-3.5 text-indigo-400" />
+                  Analytics
+                </Link>
+              )}
               <Link
                 href={
                   user.role === 'RECRUITER' || user.role === 'ADMIN' || user.role === 'HIRING_MANAGER'
