@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Sparkles, User, LogOut, Briefcase, LayoutDashboard, Menu, X, Sun, Moon, Calendar, Code2, FileText, BarChart3 } from 'lucide-react';
+import { Sparkles, User, LogOut, Briefcase, LayoutDashboard, Menu, X, Sun, Moon, Calendar, Code2, FileText, BarChart3, ShieldCheck } from 'lucide-react';
 
 export default function Navbar() {
   const router = useRouter();
@@ -83,6 +83,16 @@ export default function Navbar() {
 
           {user ? (
             <div className="flex items-center gap-3">
+              {user.role === 'ADMIN' && (
+                <Link
+                  href="/dashboard/admin"
+                  className="px-3 py-2 rounded-xl text-xs font-semibold bg-rose-950/80 border border-rose-800 text-rose-300 hover:bg-rose-900 flex items-center gap-1.5 transition-all"
+                  title="Admin Security & Role Management"
+                >
+                  <ShieldCheck className="w-3.5 h-3.5 text-rose-400" />
+                  Admin Panel
+                </Link>
+              )}
               {(user.role === 'RECRUITER' || user.role === 'ADMIN' || user.role === 'HIRING_MANAGER') && (
                 <Link
                   href="/dashboard/recruiter/analytics"
