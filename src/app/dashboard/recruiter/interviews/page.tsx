@@ -3,6 +3,7 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import InterviewFeedbackModal from '@/components/InterviewFeedbackModal';
 import {
   Calendar as CalendarIcon,
   Clock,
@@ -25,7 +26,9 @@ import {
   X,
   MoreVertical,
   CalendarCheck,
-  Building2
+  Building2,
+  Award,
+  Star
 } from 'lucide-react';
 
 function RecruiterInterviewsContent() {
@@ -41,7 +44,11 @@ function RecruiterInterviewsContent() {
   const [editingInterview, setEditingInterview] = useState<any>(null);
   const [interviewers, setInterviewers] = useState<any[]>([]);
   const [applications, setApplications] = useState<any[]>([]);
-  
+
+  // Feedback Modal State
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [selectedInterviewForFeedback, setSelectedInterviewForFeedback] = useState<any>(null);
+
   // Schedule Form State
   const [selectedAppId, setSelectedAppId] = useState('');
   const [selectedInterviewerId, setSelectedInterviewerId] = useState('');
@@ -153,7 +160,6 @@ function RecruiterInterviewsContent() {
       const scheduledDateTime = new Date(`${interviewDate}T${interviewTime}:00`);
 
       if (editingInterview) {
-        // Update existing interview
         const res = await fetch(`/api/interviews/${editingInterview.id}`, {
           method: 'PATCH',
           headers: {
@@ -172,7 +178,6 @@ function RecruiterInterviewsContent() {
         if (!res.ok) throw new Error('Failed to update interview');
         setMessage('Interview updated successfully!');
       } else {
-        // Create new interview
         const res = await fetch('/api/interviews', {
           method: 'POST',
           headers: {
@@ -208,8 +213,8 @@ function RecruiterInterviewsContent() {
   const handleStatusChange = async (interviewId: string, newStatus: string) => {
     try {
       const token = localStorage.getItem('ats_token');
-      setInterviews((prev) =>
-        prev.map((item) => (item.id === interviewId ? { ...item, status: newStatus } : item))
+      setInterviews((prev: any[]) =>
+        prev.map((item: any) => (item.id === interviewId ? { ...item, status: newStatus } : item))
       );
 
       await fetch(`/api/interviews/${interviewId}`, {
@@ -234,7 +239,7 @@ function RecruiterInterviewsContent() {
   };
 
   // Filtered interviews
-  const filteredInterviews = interviews.filter((item) => {
+  const filteredInterviews = interviews.filter((item: any) => {
     const candidateName = item.application?.candidate?.user?.name || '';
     const jobTitle = item.application?.job?.title || '';
     const interviewerName = item.interviewer?.name || '';
@@ -340,7 +345,7 @@ function RecruiterInterviewsContent() {
                   : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white'
               }`}
             >
-              Scheduled ({interviews.filter((i) => i.status === 'SCHEDULED').length})
+              Scheduled ({interviews.filter((i: any) => i.status === 'SCHEDULED').length})
             </button>
             <button
               onClick={() => setFilterStatus('COMPLETED')}
@@ -350,7 +355,7 @@ function RecruiterInterviewsContent() {
                   : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white'
               }`}
             >
-              Completed ({interviews.filter((i) => i.status === 'COMPLETED').length})
+              Completed ({interviews.filter((i: any) => i.status === 'COMPLETED').length})
             </button>
             <button
               onClick={() => setFilterStatus('CANCELLED')}
@@ -360,7 +365,7 @@ function RecruiterInterviewsContent() {
                   : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white'
               }`}
             >
-              Cancelled ({interviews.filter((i) => i.status === 'CANCELLED').length})
+              Cancelled ({interviews.filter((i: any) => i.status === 'CANCELLED').length})
             </button>
           </div>
 
@@ -433,7 +438,7 @@ function RecruiterInterviewsContent() {
                 const isToday =
                   new Date().toDateString() === dateObj.toDateString();
 
-                const dayInterviews = filteredInterviews.filter((item) => {
+                const dayInterviews = filteredInterviews.filter((item: any) => {
                   const itemDate = new Date(item.scheduledAt);
                   return itemDate.toDateString() === dateObj.toDateString();
                 });
@@ -465,7 +470,7 @@ function RecruiterInterviewsContent() {
                     </div>
 
                     <div className="space-y-1.5 mt-2 flex-1 overflow-y-auto max-h-[80px] custom-scrollbar">
-                      {dayInterviews.map((item) => (
+                      {dayInterviews.map((item: any) => (
                         <div
                           key={item.id}
                           onClick={() => handleOpenEditModal(item)}
@@ -499,7 +504,7 @@ function RecruiterInterviewsContent() {
                 <p className="text-xs text-slate-500 mt-1">Click "Schedule Interview" to book candidate slots.</p>
               </div>
             ) : (
-              filteredInterviews.map((interview) => (
+              filteredInterviews.map((interview: any) => (
                 <div
                   key={interview.id}
                   className="p-6 hover:bg-slate-850/50 transition-colors flex flex-col lg:flex-row lg:items-center justify-between gap-6"
@@ -555,6 +560,18 @@ function RecruiterInterviewsContent() {
                       </a>
                     )}
 
+                    {/* Submit / View Feedback Button */}
+                    <button
+                      onClick={() => {
+                        setSelectedInterviewForFeedback(interview);
+                        setShowFeedbackModal(true);
+                      }}
+                      className="px-3.5 py-2 rounded-xl bg-purple-950/80 border border-purple-800/80 text-purple-300 hover:bg-purple-900 font-semibold text-xs transition-all flex items-center gap-1.5"
+                    >
+                      <Award className="w-3.5 h-3.5 text-purple-400" />
+                      <span>{interview.feedbacks && interview.feedbacks.length > 0 ? 'View Feedback' : 'Score & Feedback'}</span>
+                    </button>
+
                     <button
                       onClick={() => handleCopyLink(interview)}
                       className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-slate-300 hover:text-white text-xs font-semibold flex items-center gap-1.5"
@@ -579,6 +596,14 @@ function RecruiterInterviewsContent() {
             )}
           </div>
         )}
+
+        {/* Interview Feedback Modal Component */}
+        <InterviewFeedbackModal
+          isOpen={showFeedbackModal}
+          onClose={() => setShowFeedbackModal(false)}
+          interview={selectedInterviewForFeedback}
+          onFeedbackSubmitted={() => fetchInterviews()}
+        />
 
         {/* Schedule / Reschedule Modal */}
         {showScheduleModal && (
@@ -625,7 +650,7 @@ function RecruiterInterviewsContent() {
                       onChange={(e) => setSelectedAppId(e.target.value)}
                       className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white text-xs focus:border-indigo-500 focus:outline-none"
                     >
-                      {applications.map((app) => (
+                      {applications.map((app: any) => (
                         <option key={app.id} value={app.id}>
                           {app.candidate?.user?.name} - {app.job?.title} ({app.stage})
                         </option>
@@ -690,7 +715,7 @@ function RecruiterInterviewsContent() {
                       onChange={(e) => setSelectedInterviewerId(e.target.value)}
                       className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white text-xs focus:border-indigo-500 focus:outline-none"
                     >
-                      {interviewers.map((user) => (
+                      {interviewers.map((user: any) => (
                         <option key={user.id} value={user.id}>
                           {user.name} ({user.role})
                         </option>
