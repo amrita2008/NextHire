@@ -129,7 +129,7 @@ To simulate authentic, high-quality human development over 2 days while satisfyi
   - Security tracking tab switches, warning user, auto-submitting on timer expiration.
 
 #### **Phase 8: Offer Letter Generator & Candidate Portal**
-- [ ] **Commit 22:** `feat(offers): implement dynamic PDF Offer Letter Generator and candidate acceptance portal`
+- [x] **Commit 22:** `feat(offers): implement dynamic PDF Offer Letter Generator and candidate acceptance portal`
   - Dynamic offer letter creation from templates. Candidate can accept, reject, or download PDF.
 
 #### **Phase 9: Analytics Dashboard, Admin Controls & Final Package**
