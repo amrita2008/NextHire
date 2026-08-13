@@ -21,7 +21,10 @@ import {
   CheckSquare,
   Award,
   RefreshCw,
-  Terminal
+  Terminal,
+  Lock,
+  Copy,
+  Maximize2
 } from 'lucide-react';
 
 const DEFAULT_QUESTIONS = [
@@ -49,6 +52,8 @@ const DEFAULT_QUESTIONS = [
   },
 ];
 
+const MAX_TAB_SWITCHES = 3;
+
 function AssessmentContent({ assessmentId }: { assessmentId: string }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -65,6 +70,7 @@ function AssessmentContent({ assessmentId }: { assessmentId: string }) {
   const [testSubmitted, setTestSubmitted] = useState(false);
   const [submissionResult, setSubmissionResult] = useState<any>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [submissionReason, setSubmissionReason] = useState<string>('NORMAL');
 
   // Code Execution Console State
   const [consoleOutput, setConsoleOutput] = useState<string>('');
@@ -72,23 +78,46 @@ function AssessmentContent({ assessmentId }: { assessmentId: string }) {
 
   // Anti-Cheat State
   const [tabSwitchesCount, setTabSwitchesCount] = useState(0);
-  const [cheatWarning, setCheatWarning] = useState(false);
+  const [cheatWarning, setCheatWarning] = useState<string | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   useEffect(() => {
     fetchAssessmentDetails();
 
-    // Anti-cheat visibility change listener
+    // Anti-cheat visibility & focus change listener
     const handleVisibilityChange = () => {
       if (document.hidden && !testSubmitted) {
-        setTabSwitchesCount((prev) => prev + 1);
-        setCheatWarning(true);
-        setTimeout(() => setCheatWarning(false), 4000);
+        setTabSwitchesCount((prev) => {
+          const newCount = prev + 1;
+          if (newCount >= MAX_TAB_SWITCHES) {
+            setCheatWarning(`Maximum tab switches (${MAX_TAB_SWITCHES}) exceeded! Auto-submitting test due to anti-cheat violation.`);
+            setTimeout(() => {
+              handleSubmitTest('ANTI_CHEAT_VIOLATION', newCount);
+            }, 1000);
+          } else {
+            setCheatWarning(`Warning: Tab/Window switch detected! (${newCount}/${MAX_TAB_SWITCHES} switches recorded).`);
+            setTimeout(() => setCheatWarning(null), 5000);
+          }
+          return newCount;
+        });
+      }
+    };
+
+    const handleWindowBlur = () => {
+      if (!testSubmitted) {
+        setCheatWarning('Window focus lost! Please stay inside the assessment window.');
+        setTimeout(() => setCheatWarning(null), 4000);
       }
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, []);
+    window.addEventListener('blur', handleWindowBlur);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('blur', handleWindowBlur);
+    };
+  }, [testSubmitted]);
 
   // Timer Tick Down Effect
   useEffect(() => {
@@ -97,7 +126,8 @@ function AssessmentContent({ assessmentId }: { assessmentId: string }) {
       setTimeLeft((prev) => {
         if (prev <= 1) {
           clearInterval(interval);
-          handleAutoSubmit();
+          setCheatWarning('Timer expired! Auto-submitting assessment now.');
+          handleSubmitTest('TIMER_EXPIRED', tabSwitchesCount);
           return 0;
         }
         return prev - 1;
@@ -105,7 +135,7 @@ function AssessmentContent({ assessmentId }: { assessmentId: string }) {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [testSubmitted, loading]);
+  }, [testSubmitted, loading, tabSwitchesCount]);
 
   const fetchAssessmentDetails = async () => {
     try {
@@ -147,16 +177,37 @@ function AssessmentContent({ assessmentId }: { assessmentId: string }) {
   };
 
   const handleMcqSelect = (qId: string, optionIdx: number) => {
+    if (testSubmitted) return;
     setAnswers((prev) => ({ ...prev, [qId]: optionIdx }));
   };
 
   const handleCodeChange = (qId: string, val: string) => {
+    if (testSubmitted) return;
     setAnswers((prev) => ({ ...prev, [qId]: val }));
+  };
+
+  // Anti-Cheat: Prevent Copy/Paste/Cut & Context Menu
+  const handlePreventCopyPaste = (e: React.ClipboardEvent) => {
+    e.preventDefault();
+    setCheatWarning('Copying and pasting external text is disabled during technical assessments for security compliance.');
+    setTimeout(() => setCheatWarning(null), 4000);
+  };
+
+  const handlePreventContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+  };
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().then(() => setIsFullscreen(true)).catch(() => {});
+    } else {
+      document.exitFullscreen().then(() => setIsFullscreen(false)).catch(() => {});
+    }
   };
 
   const handleRunCode = () => {
     setRunningCode(true);
-    setConsoleOutput('Executing code against test environment...\n');
+    setConsoleOutput('Executing code against isolated test sandbox...\n');
 
     setTimeout(() => {
       const currentQ = questions[activeIdx];
@@ -165,10 +216,10 @@ function AssessmentContent({ assessmentId }: { assessmentId: string }) {
       if (currentQ.type === 'sql') {
         setConsoleOutput(
           `[SQL Query Execution Log]\n` +
-          `Query: ${code.substring(0, 40)}...\n` +
+          `Query: ${code.substring(0, 45)}...\n` +
           `Status: SUCCESS\n` +
-          `Rows Returned: 5 rows matched.\n` +
-          `Execution Time: 12ms`
+          `Rows Returned: 5 matching candidate records.\n` +
+          `Execution Time: 11ms`
         );
       } else {
         setConsoleOutput(
@@ -176,20 +227,17 @@ function AssessmentContent({ assessmentId }: { assessmentId: string }) {
           `Testing inputs: nums = [2, 7, 11, 15], target = 9\n` +
           `Test Case 1: PASSED (Output: [0, 1])\n` +
           `Test Case 2: PASSED (Output: [1, 2])\n` +
-          `All 2 test cases passed successfully! (Time: 4ms)`
+          `All test cases passed cleanly! (Time: 3ms)`
         );
       }
       setRunningCode(false);
     }, 800);
   };
 
-  const handleAutoSubmit = () => {
-    handleSubmitTest();
-  };
-
-  const handleSubmitTest = async () => {
+  const handleSubmitTest = async (reason = 'NORMAL', overrideSwitches?: number) => {
     if (testSubmitted) return;
     setSubmitting(true);
+    setSubmissionReason(reason);
 
     try {
       const token = localStorage.getItem('ats_token');
@@ -201,8 +249,9 @@ function AssessmentContent({ assessmentId }: { assessmentId: string }) {
         },
         body: JSON.stringify({
           answers,
-          tabSwitchesCount,
+          tabSwitchesCount: overrideSwitches !== undefined ? overrideSwitches : tabSwitchesCount,
           applicationId,
+          reason,
         }),
       });
 
@@ -232,7 +281,7 @@ function AssessmentContent({ assessmentId }: { assessmentId: string }) {
       <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center p-8">
         <div className="text-center space-y-3">
           <div className="w-10 h-10 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
-          <p className="text-sm font-semibold text-slate-400">Loading Assessment Environment...</p>
+          <p className="text-sm font-semibold text-slate-400">Loading Anti-Cheat Assessment Suite...</p>
         </div>
       </div>
     );
@@ -240,27 +289,43 @@ function AssessmentContent({ assessmentId }: { assessmentId: string }) {
 
   // Completion / Result Screen
   if (testSubmitted && submissionResult) {
+    const isViolation = submissionReason === 'ANTI_CHEAT_VIOLATION' || (submissionResult.tabSwitchesCount && submissionResult.tabSwitchesCount >= MAX_TAB_SWITCHES);
+
     return (
       <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-between selection:bg-indigo-500 selection:text-white">
         <Navbar />
         <main className="flex-1 pt-32 pb-20 px-4 sm:px-6 max-w-3xl mx-auto w-full">
           <div className="p-8 sm:p-10 rounded-2xl bg-slate-900/90 border border-slate-800 shadow-2xl text-center space-y-6">
-            <div className="w-16 h-16 rounded-2xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 mx-auto">
-              <Award className="w-8 h-8" />
+            <div className={`w-16 h-16 rounded-2xl border flex items-center justify-center mx-auto ${
+              isViolation
+                ? 'bg-rose-950/40 border-rose-800 text-rose-400'
+                : submissionResult.passed
+                ? 'bg-emerald-950/40 border-emerald-800 text-emerald-400'
+                : 'bg-amber-950/40 border-amber-800 text-amber-400'
+            }`}>
+              {isViolation ? <ShieldAlert className="w-8 h-8" /> : <Award className="w-8 h-8" />}
             </div>
 
             <div>
               <span
                 className={`px-3 py-1 rounded-full text-xs font-extrabold border ${
-                  submissionResult.passed
+                  isViolation
+                    ? 'bg-rose-950/80 border-rose-800 text-rose-300'
+                    : submissionResult.passed
                     ? 'bg-emerald-950/80 border-emerald-700 text-emerald-300'
-                    : 'bg-rose-950/80 border-rose-800 text-rose-300'
+                    : 'bg-amber-950/80 border-amber-800 text-amber-300'
                 }`}
               >
-                {submissionResult.passed ? 'TEST PASSED' : 'TEST NOT PASSED'}
+                {isViolation
+                  ? 'SUBMITTED DUE TO ANTI-CHEAT VIOLATION'
+                  : submissionReason === 'TIMER_EXPIRED'
+                  ? 'SUBMITTED (TIMER EXPIRED)'
+                  : submissionResult.passed
+                  ? 'TEST PASSED'
+                  : 'TEST NOT PASSED'}
               </span>
               <h1 className="text-3xl font-extrabold text-white mt-3">
-                Assessment Completed
+                Assessment Submission Complete
               </h1>
               <p className="text-slate-400 text-sm mt-1">
                 {assessment?.title || 'Technical Assessment'}
@@ -270,27 +335,37 @@ function AssessmentContent({ assessmentId }: { assessmentId: string }) {
             {/* Score Ring / Card */}
             <div className="p-6 rounded-xl bg-slate-950 border border-slate-800 max-w-md mx-auto">
               <span className="text-xs font-semibold text-slate-400 block uppercase tracking-wider mb-1">
-                Your Score
+                Final Calculated Score
               </span>
               <div className="text-5xl font-black text-white">{submissionResult.score}%</div>
               <p className="text-xs text-slate-400 mt-2">
-                Required Pass Score: {assessment?.passPercentage || 70}%
+                Required Pass Threshold: {assessment?.passPercentage || 70}%
               </p>
             </div>
 
-            {/* Anti-cheat summary */}
-            <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-400 flex items-center justify-between max-w-md mx-auto">
-              <span className="flex items-center gap-1.5 font-medium">
-                <ShieldAlert className="w-4 h-4 text-amber-400" />
-                Tab Switches Recorded:
-              </span>
-              <span className="font-bold text-white">{submissionResult.tabSwitchesCount || 0}</span>
+            {/* Security Audit Log Badge */}
+            <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-400 space-y-2 max-w-md mx-auto">
+              <div className="flex items-center justify-between">
+                <span className="flex items-center gap-1.5 font-medium">
+                  <ShieldAlert className="w-4 h-4 text-amber-400" />
+                  Anti-Cheat Tab Switches:
+                </span>
+                <span className={`font-bold ${submissionResult.tabSwitchesCount >= MAX_TAB_SWITCHES ? 'text-rose-400' : 'text-white'}`}>
+                  {submissionResult.tabSwitchesCount || 0} / {MAX_TAB_SWITCHES} Max Allowed
+                </span>
+              </div>
+              <div className="flex items-center justify-between border-t border-slate-900 pt-2">
+                <span className="font-medium text-slate-400">Submission Trigger:</span>
+                <span className="font-bold text-indigo-400">{submissionReason}</span>
+              </div>
             </div>
 
             <p className="text-xs text-slate-400 max-w-lg mx-auto leading-relaxed">
-              {submissionResult.passed
-                ? 'Great job! Your performance met the required standards and your application has been automatically updated.'
-                : 'Thank you for taking the coding assessment. The hiring team will review your application.'}
+              {isViolation
+                ? 'Your test was automatically submitted because the tab switch limit was reached. The hiring recruiter will review the anti-cheat security log.'
+                : submissionResult.passed
+                ? 'Great job! Your performance met the required standards and your application stage has been updated automatically.'
+                : 'Thank you for taking the assessment. Your results have been submitted to the recruitment team.'}
             </p>
 
             <div className="pt-4">
@@ -298,7 +373,7 @@ function AssessmentContent({ assessmentId }: { assessmentId: string }) {
                 onClick={() => router.push('/dashboard/candidate')}
                 className="px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm shadow-lg shadow-indigo-600/30 transition-all"
               >
-                Return to Candidate Dashboard
+                Return to Candidate Portal
               </button>
             </div>
           </div>
@@ -309,17 +384,38 @@ function AssessmentContent({ assessmentId }: { assessmentId: string }) {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col selection:bg-indigo-500 selection:text-white">
+    <div
+      onContextMenu={handlePreventContextMenu}
+      className="min-h-screen bg-slate-950 text-slate-100 flex flex-col selection:bg-indigo-500 selection:text-white select-none"
+    >
       <Navbar />
 
       <main className="flex-1 pt-24 pb-12 px-4 sm:px-6 lg:px-8 max-w-[1600px] mx-auto w-full flex flex-col">
-        {/* Anti-Cheat Warning Toast */}
+        {/* Anti-Cheat Warning Alert Banner */}
         {cheatWarning && (
-          <div className="fixed top-24 right-6 z-50 p-4 rounded-xl bg-rose-950 border border-rose-800 text-rose-200 text-xs font-semibold shadow-2xl flex items-center gap-2 animate-bounce">
+          <div className="fixed top-24 right-6 z-50 p-4 rounded-xl bg-rose-950 border border-rose-800 text-rose-200 text-xs font-semibold shadow-2xl flex items-center gap-2 max-w-md animate-bounce">
             <ShieldAlert className="w-5 h-5 text-rose-400 shrink-0" />
-            <span>Warning: Tab switch detected! ({tabSwitchesCount} recorded). Stay on this window.</span>
+            <span>{cheatWarning}</span>
           </div>
         )}
+
+        {/* Security Rules Info Banner */}
+        <div className="mb-4 p-3 rounded-xl bg-purple-950/40 border border-purple-800/60 text-purple-300 text-xs flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <Lock className="w-4 h-4 text-purple-400 shrink-0" />
+            <span>
+              <strong>Security Protocol Active:</strong> Tab switching is monitored (Max {MAX_TAB_SWITCHES} switches). Copy-pasting code from external windows is disabled.
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={toggleFullscreen}
+            className="px-3 py-1 rounded-lg bg-purple-900/60 hover:bg-purple-800 text-purple-200 text-[11px] font-bold flex items-center gap-1 shrink-0 transition-all"
+          >
+            <Maximize2 className="w-3 h-3" />
+            <span>{isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}</span>
+          </button>
+        </div>
 
         {/* Top Assessment Header */}
         <div className="p-4 sm:p-5 rounded-2xl bg-slate-900/90 border border-slate-800 mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xl">
@@ -330,7 +426,7 @@ function AssessmentContent({ assessmentId }: { assessmentId: string }) {
               </span>
               <span className="px-2.5 py-0.5 rounded-md bg-amber-950/80 border border-amber-800/80 text-amber-300 text-[10px] font-bold flex items-center gap-1">
                 <ShieldAlert className="w-3 h-3 text-amber-400" />
-                Anti-Cheat Active ({tabSwitchesCount} Switches)
+                Anti-Cheat ({tabSwitchesCount} / {MAX_TAB_SWITCHES} Switches)
               </span>
             </div>
             <h1 className="text-xl font-extrabold text-white mt-1">
@@ -354,7 +450,7 @@ function AssessmentContent({ assessmentId }: { assessmentId: string }) {
 
             {/* Submit Button */}
             <button
-              onClick={handleSubmitTest}
+              onClick={() => handleSubmitTest('NORMAL', tabSwitchesCount)}
               disabled={submitting}
               className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs shadow-lg shadow-emerald-600/30 flex items-center gap-1.5 transition-all"
             >
@@ -479,13 +575,16 @@ function AssessmentContent({ assessmentId }: { assessmentId: string }) {
                   </button>
                 </div>
 
-                {/* CodeMirror Textarea */}
+                {/* CodeMirror Textarea with Copy-Paste Protection */}
                 <div className="relative rounded-xl border border-slate-800 bg-slate-950 overflow-hidden">
                   <textarea
                     rows={10}
+                    onCopy={handlePreventCopyPaste}
+                    onPaste={handlePreventCopyPaste}
+                    onCut={handlePreventCopyPaste}
                     value={answers[currentQId] || ''}
                     onChange={(e) => handleCodeChange(currentQId, e.target.value)}
-                    className="w-full p-4 bg-slate-950 text-indigo-200 font-mono text-xs focus:outline-none custom-scrollbar leading-relaxed resize-y"
+                    className="w-full p-4 bg-slate-950 text-indigo-200 font-mono text-xs focus:outline-none custom-scrollbar leading-relaxed resize-y select-text"
                     placeholder="// Write your solution here..."
                   />
                 </div>

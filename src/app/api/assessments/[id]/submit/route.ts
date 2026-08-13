@@ -17,7 +17,7 @@ export async function POST(
 
     const { id } = await params;
     const body = await req.json();
-    const { answers, tabSwitchesCount, applicationId } = body;
+    const { answers, tabSwitchesCount, applicationId, reason } = body;
 
     const assessment = await prisma.codingAssessment.findUnique({
       where: { id },
@@ -47,15 +47,15 @@ export async function POST(
           correctCount++;
         }
       } else if (q.type === 'sql' || q.type === 'code') {
-        // Evaluate code solution: if non-empty code provided, award partial/full score
         if (typeof candidateAnswer === 'string' && candidateAnswer.trim().length > 10) {
           correctCount++;
         }
       }
     });
 
-    const calculatedScore = Math.round((correctCount / totalQuestions) * 100);
-    const passed = calculatedScore >= assessment.passPercentage;
+    const isViolation = reason === 'ANTI_CHEAT_VIOLATION' || (tabSwitchesCount && tabSwitchesCount >= 3);
+    const calculatedScore = isViolation ? 0 : Math.round((correctCount / totalQuestions) * 100);
+    const passed = !isViolation && calculatedScore >= assessment.passPercentage;
 
     const answersJson = typeof answers === 'string' ? answers : JSON.stringify(answers || {});
 
@@ -75,7 +75,7 @@ export async function POST(
       },
     });
 
-    // If candidate has an active application and passed, auto-progress stage to SHORTLISTED or TECH_INTERVIEW
+    // If candidate has an active application and passed, auto-progress stage to SHORTLISTED
     if (applicationId && passed) {
       await prisma.application.update({
         where: { id: applicationId },
@@ -88,9 +88,11 @@ export async function POST(
       data: {
         userId: userPayload.userId,
         title: `Coding Assessment Completed: ${assessment.title}`,
-        message: `You scored ${calculatedScore}% (${passed ? 'PASSED' : 'NOT PASSED'}). ${
-          passed ? 'Your application has been shortlisted!' : 'Thank you for participating.'
-        }`,
+        message: isViolation
+          ? `Assessment submitted due to anti-cheat violation (${tabSwitchesCount} tab switches).`
+          : `You scored ${calculatedScore}% (${passed ? 'PASSED' : 'NOT PASSED'}). ${
+              passed ? 'Your application has been shortlisted!' : 'Thank you for participating.'
+            }`,
         type: 'ASSESSMENT_COMPLETED',
       },
     });
@@ -102,7 +104,7 @@ export async function POST(
         action: 'SUBMIT_ASSESSMENT',
         entity: 'AssessmentAttempt',
         entityId: attempt.id,
-        details: `Candidate completed ${assessment.title} with score ${calculatedScore}% (Passed: ${passed})`,
+        details: `Candidate completed ${assessment.title} with score ${calculatedScore}% (Reason: ${reason || 'NORMAL'}, Tab Switches: ${tabSwitchesCount || 0})`,
       },
     });
 
