@@ -123,7 +123,7 @@ To simulate authentic, high-quality human development over 2 days while satisfyi
   - Form evaluating Technical Skills, Communication, Problem Solving with composite rating.
 
 #### **Phase 7: Coding Assessment & Anti-Cheat Module**
-- [ ] **Commit 20:** `feat(assessment): build Coding Assessment engine with CodeMirror editor and timer`
+- [x] **Commit 20:** `feat(assessment): build Coding Assessment engine with CodeMirror editor and timer`
   - Test environment supporting MCQs, SQL, and coding tasks with live timer.
 - [ ] **Commit 21:** `feat(assessment): add tab-switch detection anti-cheat and automatic submission logic`
   - Security tracking tab switches, warning user, auto-submitting on timer expiration.
