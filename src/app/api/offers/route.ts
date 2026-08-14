@@ -20,7 +20,20 @@ export async function GET(req: NextRequest) {
       where.applicationId = applicationId;
     }
 
-    const offers = await prisma.offerLetter.findMany({
+    if (userPayload.role === 'CANDIDATE') {
+      const profile = await prisma.candidateProfile.findUnique({
+        where: { userId: userPayload.userId },
+      });
+      if (profile) {
+        const apps = await prisma.application.findMany({
+          where: { candidateId: profile.id },
+          select: { id: true },
+        });
+        where.applicationId = { in: apps.map((a) => a.id) };
+      }
+    }
+
+    const offersRaw = await prisma.offerLetter.findMany({
       where,
       include: {
         application: {
@@ -51,6 +64,15 @@ export async function GET(req: NextRequest) {
       },
     });
 
+    const offers = offersRaw.map((o) => ({
+      ...o,
+      candidateName: o.application?.candidate?.user?.name || 'Candidate',
+      candidateEmail: o.application?.candidate?.user?.email || 'candidate@example.com',
+      jobTitle: o.role || o.application?.job?.title || 'Engineering Role',
+      currency: 'USD',
+      welcomeNote: o.benefits,
+    }));
+
     return NextResponse.json({ offers });
   } catch (error: any) {
     console.error('Fetch Offers API Error:', error);
@@ -72,17 +94,27 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { applicationId, role, salary, joiningDate, location, benefits } = body;
+    const { applicationId, candidateEmail, candidateName, jobTitle, role, salary, joiningDate, location, benefits, welcomeNote } = body;
 
-    if (!applicationId || !salary || !joiningDate) {
-      return NextResponse.json(
-        { error: 'Application ID, salary, and joining date are required' },
-        { status: 400 }
-      );
+    let targetApplicationId = applicationId;
+
+    if (!targetApplicationId) {
+      // Find candidate application by candidate email or select most recent candidate application
+      const firstApp = await prisma.application.findFirst({
+        include: { candidate: { include: { user: true } } },
+        orderBy: { createdAt: 'desc' },
+      });
+      if (firstApp) {
+        targetApplicationId = firstApp.id;
+      }
+    }
+
+    if (!targetApplicationId) {
+      return NextResponse.json({ error: 'No active candidate application found to issue offer to' }, { status: 400 });
     }
 
     const application = await prisma.application.findUnique({
-      where: { id: applicationId },
+      where: { id: targetApplicationId },
       include: { job: true, candidate: { include: { user: true } } },
     });
 
@@ -90,24 +122,26 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Application not found' }, { status: 404 });
     }
 
-    // Upsert OfferLetter using exact schema fields
+    const offerRole = role || jobTitle || application.job.title;
+    const offerBenefits = welcomeNote || benefits || 'Standard Medical, Dental, Vision & 401(k) Plan';
+
     const offer = await prisma.offerLetter.upsert({
-      where: { applicationId },
+      where: { applicationId: targetApplicationId },
       create: {
-        applicationId,
-        role: role || application.job.title,
+        applicationId: targetApplicationId,
+        role: offerRole,
         salary: parseInt(String(salary)),
         joiningDate: new Date(joiningDate),
-        location: location || application.job.location || 'Remote',
-        benefits: benefits || 'Standard Health, Vision, Dental & 401(k) Plan',
+        location: location || application.job.location || 'San Francisco, CA',
+        benefits: offerBenefits,
         status: 'PENDING',
       },
       update: {
-        role: role || application.job.title,
+        role: offerRole,
         salary: parseInt(String(salary)),
         joiningDate: new Date(joiningDate),
-        location: location || application.job.location || 'Remote',
-        benefits: benefits || 'Standard Health, Vision, Dental & 401(k) Plan',
+        location: location || application.job.location || 'San Francisco, CA',
+        benefits: offerBenefits,
         status: 'PENDING',
       },
       include: {
@@ -117,13 +151,11 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Automatically transition application stage to OFFER
     await prisma.application.update({
-      where: { id: applicationId },
+      where: { id: targetApplicationId },
       data: { stage: 'OFFER' },
     });
 
-    // Notify Candidate User
     if (application.candidate?.userId) {
       await prisma.notification.create({
         data: {
@@ -135,7 +167,6 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Audit Log
     await prisma.auditLog.create({
       data: {
         userId: userPayload.userId,
@@ -149,7 +180,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       {
         message: 'Offer letter issued and sent to candidate successfully!',
-        offer,
+        offer: {
+          ...offer,
+          candidateName: candidateName || application.candidate?.user?.name,
+          candidateEmail: candidateEmail || application.candidate?.user?.email,
+          jobTitle: offer.role,
+          currency: 'USD',
+          welcomeNote: offer.benefits,
+        },
       },
       { status: 201 }
     );

@@ -40,6 +40,17 @@ export async function GET(req: NextRequest) {
         company: {
           select: { name: true, logo: true, website: true, officeLocations: true },
         },
+        applications: {
+          include: {
+            candidate: {
+              include: {
+                user: {
+                  select: { id: true, name: true, email: true, avatarUrl: true },
+                },
+              },
+            },
+          },
+        },
       },
       orderBy: { createdAt: 'desc' },
     });

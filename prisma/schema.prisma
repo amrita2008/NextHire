@@ -84,7 +84,7 @@ model Company {
   industry        String?
   companySize     String?
   description     String?
-  officeLocations String[]
+  officeLocations String[] @default([])
   createdAt       DateTime @default(now())
 
   users User[]
@@ -97,10 +97,10 @@ model CandidateProfile {
   phone          String?
   location       String?
   bio            String?
-  education      String[]
-  experience     String[]
-  skills         String[]
-  certifications String[]
+  education      String[] @default([])
+  experience     String[] @default([])
+  skills         String[] @default([])
+  certifications String[] @default([])
   portfolioUrl   String?
   githubUrl      String?
   linkedinUrl    String?
@@ -125,7 +125,7 @@ model Job {
   salaryMax          Int?
   currency           String         @default("USD")
   experienceRequired String
-  skillsRequired     String[]
+  skillsRequired     String[]       @default([])
   employmentType     EmploymentType @default(FULL_TIME)
   workMode           WorkMode       @default(HYBRID)
   deadline           DateTime?

@@ -60,7 +60,7 @@ export default function Navbar() {
             <Terminal className="w-4 h-4 text-slate-500" />
             API Docs
           </Link>
-          <Link href="/#features" className="text-xs font-semibold text-slate-600 hover:text-rose-900 transition-colors">
+          <Link href="/features" className="text-xs font-semibold text-slate-600 hover:text-rose-900 transition-colors">
             Features
           </Link>
           <Link href="/#pricing" className="text-xs font-semibold text-slate-600 hover:text-rose-900 transition-colors">

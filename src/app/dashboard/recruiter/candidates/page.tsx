@@ -17,7 +17,8 @@ import {
   Clock,
   ArrowRight,
   X,
-  UserCheck
+  UserCheck,
+  Video
 } from 'lucide-react';
 
 const STAGES = [
@@ -42,6 +43,12 @@ function KanbanBoardContent() {
   // AI Match Modal State
   const [aiMatchingApp, setAiMatchingApp] = useState<any>(null);
   const [aiMatching, setAiMatching] = useState(false);
+
+  // Schedule Quick Modal State
+  const [scheduleApp, setScheduleApp] = useState<any>(null);
+  const [scheduledAt, setScheduledAt] = useState('');
+  const [scheduling, setScheduling] = useState(false);
+  const [scheduleMsg, setScheduleMsg] = useState('');
 
   useEffect(() => {
     fetchApplications();
@@ -129,6 +136,45 @@ function KanbanBoardContent() {
     }
   };
 
+  const handleQuickScheduleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!scheduleApp || !scheduledAt) return;
+    setScheduling(true);
+    setScheduleMsg('');
+
+    try {
+      const token = localStorage.getItem('ats_token');
+      const res = await fetch('/api/interviews', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          applicationId: scheduleApp.id,
+          scheduledAt,
+          durationMinutes: 45,
+          title: `Technical Interview for ${scheduleApp.jobTitle}`,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to schedule interview');
+
+      setScheduleMsg(`✅ Interview scheduled! Meet URL: ${data.interview?.meetingUrl}`);
+      // Auto move application to TECH_INTERVIEW
+      handleStageChange(scheduleApp.id, 'TECH_INTERVIEW');
+      setTimeout(() => {
+        setScheduleApp(null);
+        setScheduleMsg('');
+      }, 2000);
+    } catch (err: any) {
+      setScheduleMsg(err.message || 'Failed to schedule');
+    } finally {
+      setScheduling(false);
+    }
+  };
+
   const filteredApps = applications.filter((app) => {
     const q = searchQuery.toLowerCase();
     const name = app.candidate?.user?.name || app.candidateName || '';
@@ -153,7 +199,7 @@ function KanbanBoardContent() {
               Candidate Hiring Pipeline
             </h1>
             <p className="text-slate-600 text-xs mt-0.5">
-              Drag candidate cards across recruitment stages or execute Gemini AI suitability match evaluations.
+              Drag candidate cards across recruitment stages, schedule Google Meet calls, or execute Gemini AI suitability match evaluations.
             </p>
           </div>
 
@@ -234,19 +280,29 @@ function KanbanBoardContent() {
 
                         <p className="text-[11px] text-slate-500 truncate">{app.jobTitle}</p>
 
-                        <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
+                        <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-1">
                           <button
                             onClick={() => handleRunAiMatch(app)}
                             className="text-[10px] font-bold text-rose-900 hover:underline flex items-center gap-1"
+                            title="Run Gemini AI Match"
                           >
                             <Sparkles className="w-3 h-3" />
-                            <span>AI Match</span>
+                            <span>AI</span>
+                          </button>
+
+                          <button
+                            onClick={() => setScheduleApp(app)}
+                            className="text-[10px] font-bold text-emerald-800 hover:underline flex items-center gap-1"
+                            title="Schedule Google Meet"
+                          >
+                            <Video className="w-3 h-3" />
+                            <span>Meet</span>
                           </button>
 
                           <select
                             value={app.stage}
                             onChange={(e) => handleStageChange(app.id, e.target.value)}
-                            className="text-[10px] bg-slate-50 border border-slate-200 text-slate-700 rounded px-1.5 py-0.5 focus:outline-none"
+                            className="text-[10px] bg-slate-50 border border-slate-200 text-slate-700 rounded px-1 py-0.5 focus:outline-none"
                           >
                             {STAGES.map((s) => (
                               <option key={s.id} value={s.id}>
@@ -301,6 +357,68 @@ function KanbanBoardContent() {
                   </div>
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* Quick Schedule Meet Modal */}
+        {scheduleApp && (
+          <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-white border border-slate-200 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">Schedule Interview</h3>
+                  <p className="text-xs text-slate-500">
+                    {scheduleApp.candidate?.user?.name || 'Candidate'} — {scheduleApp.jobTitle}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setScheduleApp(null)}
+                  className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {scheduleMsg && (
+                <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold">
+                  {scheduleMsg}
+                </div>
+              )}
+
+              <form onSubmit={handleQuickScheduleSubmit} className="space-y-4 text-xs">
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Select Date & Time *</label>
+                  <input
+                    type="datetime-local"
+                    required
+                    value={scheduledAt}
+                    onChange={(e) => setScheduledAt(e.target.value)}
+                    className="w-full px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 focus:border-rose-900 focus:outline-none"
+                  />
+                </div>
+
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-600 text-[11px]">
+                  Creates a 45-min Google Meet session and auto-advances candidate stage to <strong>Tech Interview</strong>.
+                </div>
+
+                <div className="pt-2 flex items-center justify-end gap-2 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => setScheduleApp(null)}
+                    className="px-4 py-2 rounded-xl bg-slate-100 text-slate-600 font-semibold"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={scheduling}
+                    className="px-4 py-2 rounded-xl bg-rose-900 hover:bg-rose-800 text-white font-bold shadow-sm"
+                  >
+                    {scheduling ? 'Scheduling...' : 'Generate Meet Link'}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         )}

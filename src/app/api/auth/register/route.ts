@@ -79,6 +79,9 @@ export async function POST(req: NextRequest) {
     return response;
   } catch (error: any) {
     console.error('Registration Error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    const errorMessage = process.env.NODE_ENV === 'development' || process.env.DEBUG
+      ? (error?.message || 'Internal server error')
+      : 'Internal server error';
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }

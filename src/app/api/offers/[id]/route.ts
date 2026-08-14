@@ -67,9 +67,9 @@ export async function PATCH(
 
     const { id } = await params;
     const body = await req.json();
-    const { status } = body; // ACCEPTED or REJECTED
+    const normalizedStatus = status === 'DECLINED' ? 'REJECTED' : status;
 
-    if (!status || !['ACCEPTED', 'REJECTED'].includes(status)) {
+    if (!normalizedStatus || !['ACCEPTED', 'REJECTED'].includes(normalizedStatus)) {
       return NextResponse.json({ error: 'Valid status (ACCEPTED or REJECTED) is required' }, { status: 400 });
     }
 
@@ -85,14 +85,14 @@ export async function PATCH(
     // Update Offer Status
     const updatedOffer = await prisma.offerLetter.update({
       where: { id },
-      data: { status: status as 'ACCEPTED' | 'REJECTED' },
+      data: { status: normalizedStatus as 'ACCEPTED' | 'REJECTED' },
       include: {
         application: true,
       },
     });
 
     // Update Application Stage: HIRED if ACCEPTED, REJECTED if REJECTED
-    const newStage = status === 'ACCEPTED' ? 'HIRED' : 'REJECTED';
+    const newStage = normalizedStatus === 'ACCEPTED' ? 'HIRED' : 'REJECTED';
     await prisma.application.update({
       where: { id: existingOffer.applicationId },
       data: { stage: newStage },

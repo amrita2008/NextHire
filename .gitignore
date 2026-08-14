@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# temp & scratch files
+repomix-output.xml
+AGENTS.md
+CLAUDE.md
+
