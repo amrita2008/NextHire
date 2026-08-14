@@ -1,5 +1,6 @@
 # 🚀 NextHire — Next-Gen AI Applicant Tracking & Engineering Hiring Platform
 
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-nexthire--nsud.onrender.com-success?style=for-the-badge&logo=render)](https://nexthire-nsud.onrender.com/)
 [![Hackathon Winner Showcase](https://img.shields.io/badge/Hackathon-Winning%20Submission-rose?style=for-the-badge&logo=trophy)](https://github.com/amrita2008/NextHire)
 [![Next.js 15](https://img.shields.io/badge/Next.js-15.1-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
 [![React 19](https://img.shields.io/badge/React-19.0-61DAFB?style=for-the-badge&logo=react)](https://react.dev/)
@@ -9,6 +10,7 @@
 [![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-47A248?style=for-the-badge&logo=mongodb)](https://www.mongodb.com/)
 [![Docker Containerized](https://img.shields.io/badge/Docker-Ready-2496ED?style=for-the-badge&logo=docker)](https://www.docker.com/)
 
+> 🌐 **Live Web Application:** [https://nexthire-nsud.onrender.com/](https://nexthire-nsud.onrender.com/)  
 > **NextHire** is an enterprise-grade, end-to-end Applicant Tracking System (ATS) and Technical Hiring Platform designed to eliminate recruitment bottlenecks. Powered by **Google Gemini 2.5 AI**, NextHire unifies multimodal resume screening, automated candidate-to-job fit scoring, interactive drag-and-drop Kanban pipelines, Google Meet interview provisioning, live anti-cheat coding test sandboxes, and PDF offer letter generation into a single unified platform.
 
 ---
