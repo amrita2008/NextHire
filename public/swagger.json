@@ -1,0 +1,131 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "NextHire - Enterprise Applicant Tracking & Hiring Platform API",
+    "version": "1.0.0",
+    "description": "Comprehensive REST API specification for NextHire, featuring Google Gemini AI Resume Parsing, Candidate Matching, Interactive Kanban Pipeline, Google Meet Interview Scheduling, Live Coding Assessment Sandbox, and PDF Offer Letter Generation."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000/api",
+      "description": "Local Development Server"
+    }
+  ],
+  "paths": {
+    "/auth/register": {
+      "post": {
+        "summary": "Register a new User",
+        "description": "Registers a new Candidate, Recruiter, Hiring Manager, or Interviewer",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": { "type": "string", "example": "Jane Doe" },
+                  "email": { "type": "string", "example": "jane@example.com" },
+                  "password": { "type": "string", "example": "Password123!" },
+                  "role": { "type": "string", "example": "CANDIDATE" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "User created successfully" },
+          "400": { "description": "Invalid input parameters" }
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "summary": "Authenticate User & Issue JWT Token",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": { "type": "string", "example": "recruiter@nexthire.ai" },
+                  "password": { "type": "string", "example": "Recruiter123!" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "JWT authentication token issued" }
+        }
+      }
+    },
+    "/jobs": {
+      "get": {
+        "summary": "List all Job Openings",
+        "responses": {
+          "200": { "description": "Array of job postings" }
+        }
+      },
+      "post": {
+        "summary": "Create a Job Opening (Recruiter / Hiring Manager)",
+        "responses": {
+          "201": { "description": "Job posting created" }
+        }
+      }
+    },
+    "/ai/match-job": {
+      "post": {
+        "summary": "Run Gemini AI Resume-Job Matching",
+        "description": "Uses Google Gemini AI to analyze candidate experience against job requirements, returning a 0-100 match score, key strengths, and missing skills gap analysis.",
+        "responses": {
+          "200": { "description": "AI Match evaluation complete" }
+        }
+      }
+    },
+    "/interviews": {
+      "get": {
+        "summary": "List Scheduled Interviews",
+        "responses": {
+          "200": { "description": "List of scheduled candidate interviews" }
+        }
+      },
+      "post": {
+        "summary": "Schedule Interview & Generate Google Meet Link",
+        "responses": {
+          "201": { "description": "Interview scheduled and invite link generated" }
+        }
+      }
+    },
+    "/assessments": {
+      "get": {
+        "summary": "List Coding & MCQ Assessments",
+        "responses": {
+          "200": { "description": "List of technical assessments" }
+        }
+      }
+    },
+    "/offers": {
+      "get": {
+        "summary": "Fetch Formal Job Offers",
+        "responses": {
+          "200": { "description": "List of offer letters" }
+        }
+      },
+      "post": {
+        "summary": "Extend Job Offer & Generate PDF Letter",
+        "responses": {
+          "201": { "description": "Offer letter created" }
+        }
+      }
+    },
+    "/analytics": {
+      "get": {
+        "summary": "Get Recruitment Funnel & KPI Analytics",
+        "responses": {
+          "200": { "description": "Real-time metrics, conversion funnel, and time-to-hire" }
+        }
+      }
+    }
+  }
+}

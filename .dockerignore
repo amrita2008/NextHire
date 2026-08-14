@@ -1,9 +1,13 @@
+Dockerfile
+.dockerignore
 node_modules
 .next
 out
 .git
 .gitignore
+README.md
 .env
 .env.local
-docker-compose.yml
-Dockerfile
+.env.development.local
+.env.test.local
+.env.production.local

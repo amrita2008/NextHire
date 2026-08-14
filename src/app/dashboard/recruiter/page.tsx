@@ -1,66 +1,76 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import {
-  Briefcase,
   Users,
+  Briefcase,
   Calendar,
-  FileCheck,
+  Code2,
+  FileText,
+  BarChart3,
   Plus,
+  ArrowRight,
+  TrendingUp,
   Search,
-  Filter,
-  MoreVertical,
-  MapPin,
-  DollarSign,
-  Clock,
   Sparkles,
-  Building2,
-  X,
-  CheckCircle2,
-  AlertCircle
+  MapPin,
+  Clock,
+  DollarSign
 } from 'lucide-react';
 
-export default function RecruiterDashboard() {
+function RecruiterDashboardContent() {
   const [jobs, setJobs] = useState<any[]>([]);
+  const [stats, setStats] = useState({
+    totalJobs: 0,
+    activeCandidates: 0,
+    scheduledInterviews: 0,
+    pendingOffers: 0,
+  });
   const [loading, setLoading] = useState(true);
-  const [showPostingModal, setShowPostingModal] = useState(false);
   const [user, setUser] = useState<any>(null);
 
-  // New Job Form State
-  const [jobTitle, setJobTitle] = useState('');
+  // New Job Modal State
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [title, setTitle] = useState('');
   const [department, setDepartment] = useState('');
   const [location, setLocation] = useState('');
+  const [workMode, setWorkMode] = useState('HYBRID');
+  const [type, setType] = useState('FULL_TIME');
   const [salaryMin, setSalaryMin] = useState('');
   const [salaryMax, setSalaryMax] = useState('');
-  const [experienceRequired, setExperienceRequired] = useState('2-4 years');
-  const [skillsRequired, setSkillsRequired] = useState('');
-  const [employmentType, setEmploymentType] = useState('FULL_TIME');
-  const [workMode, setWorkMode] = useState('HYBRID');
   const [description, setDescription] = useState('');
-  const [postingLoading, setPostingLoading] = useState(false);
-  const [message, setMessage] = useState('');
+  const [skillsRequired, setSkillsRequired] = useState('');
+  const [creating, setCreating] = useState(false);
 
   useEffect(() => {
     const storedUser = localStorage.getItem('ats_user');
     if (storedUser) {
-      setUser(JSON.parse(storedUser));
+      try {
+        setUser(JSON.parse(storedUser));
+      } catch (e) {}
     }
-    fetchJobs();
+
+    fetchDashboardData();
   }, []);
 
-  const fetchJobs = async () => {
+  const fetchDashboardData = async () => {
     try {
       setLoading(true);
       const res = await fetch('/api/jobs');
       const data = await res.json();
       if (data.jobs) {
         setJobs(data.jobs);
+        setStats((prev) => ({
+          ...prev,
+          totalJobs: data.jobs.length,
+          activeCandidates: data.jobs.reduce((acc: number, j: any) => acc + (j.applications?.length || 0), 0),
+        }));
       }
-    } catch (e) {
-      console.error(e);
+    } catch (err) {
+      console.error('Fetch Jobs Error:', err);
     } finally {
       setLoading(false);
     }
@@ -68,8 +78,7 @@ export default function RecruiterDashboard() {
 
   const handleCreateJob = async (e: React.FormEvent) => {
     e.preventDefault();
-    setPostingLoading(true);
-    setMessage('');
+    setCreating(true);
 
     try {
       const token = localStorage.getItem('ats_token');
@@ -80,331 +89,309 @@ export default function RecruiterDashboard() {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          title: jobTitle,
+          title,
           department,
           location,
-          salaryMin,
-          salaryMax,
-          experienceRequired,
-          skillsRequired: skillsRequired.split(',').map((s) => s.trim()),
-          employmentType,
           workMode,
+          type,
+          salaryMin: salaryMin ? parseInt(salaryMin) : undefined,
+          salaryMax: salaryMax ? parseInt(salaryMax) : undefined,
           description,
+          skillsRequired: skillsRequired.split(',').map((s) => s.trim()).filter(Boolean),
         }),
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to post job');
+      if (!res.ok) throw new Error(data.error || 'Failed to post job opening');
 
-      setMessage('Job posted successfully!');
-      setShowPostingModal(false);
-      // Reset form
-      setJobTitle('');
-      setDepartment('');
-      setLocation('');
-      setDescription('');
-      fetchJobs();
+      setShowCreateModal(false);
+      fetchDashboardData();
     } catch (err: any) {
-      setMessage(err.message || 'Error creating job');
+      alert(err.message || 'Error creating job opening');
     } finally {
-      setPostingLoading(false);
+      setCreating(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col selection:bg-indigo-500 selection:text-white">
+    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col selection:bg-rose-900 selection:text-white">
       <Navbar />
 
       <main className="flex-1 pt-28 pb-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
-        {/* Dashboard Header */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <div>
-            <div className="flex items-center gap-2">
-              <span className="px-2.5 py-1 rounded-md bg-purple-950/80 border border-purple-800/80 text-purple-300 text-[11px] font-semibold uppercase tracking-wider">
-                Recruiter Portal
-              </span>
-            </div>
-            <h1 className="text-3xl font-extrabold text-white mt-1">
+            <span className="px-2.5 py-1 rounded-md bg-rose-50 border border-rose-200 text-rose-900 text-[11px] font-bold uppercase tracking-wider">
+              Recruitment Command Center
+            </span>
+            <h1 className="text-3xl font-extrabold text-slate-900 mt-1">
               Welcome back, {user?.name || 'Recruiter'}
             </h1>
-            <p className="text-slate-400 text-sm mt-0.5">Manage job postings, review candidates, and monitor hiring pipeline.</p>
+            <p className="text-slate-600 text-xs mt-0.5">
+              Overview of active job requisitions, candidate pipelines, and scheduling telemetry.
+            </p>
           </div>
 
-          <button
-            onClick={() => setShowPostingModal(true)}
-            className="px-5 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-semibold text-sm shadow-xl shadow-indigo-600/30 flex items-center gap-2 transition-all"
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="px-4.5 py-2.5 rounded-xl bg-rose-900 hover:bg-rose-800 text-white font-bold text-xs shadow-sm flex items-center gap-1.5 transition-all"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Post New Requisition</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Quick Nav Cards */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          <Link
+            href="/dashboard/recruiter/candidates"
+            className="p-5 rounded-2xl bg-white border border-slate-200 hover:border-rose-900/40 shadow-sm transition-all flex items-center gap-4 group"
           >
-            <Plus className="w-4 h-4" />
-            <span>Post New Job</span>
-          </button>
-        </div>
-
-        {/* Recruiter Summary Widgets */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-10">
-          <div className="p-6 rounded-2xl bg-slate-900/90 border border-slate-800">
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-slate-400 font-medium">Total Active Jobs</span>
-              <div className="p-2.5 rounded-xl bg-indigo-600/20 text-indigo-400">
-                <Briefcase className="w-5 h-5" />
-              </div>
+            <div className="w-10 h-10 rounded-xl bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-900 font-bold group-hover:bg-rose-900 group-hover:text-white transition-colors">
+              <Users className="w-5 h-5" />
             </div>
-            <p className="text-3xl font-extrabold text-white mt-4">{jobs.length}</p>
-            <p className="text-xs text-emerald-400 mt-2 font-medium">↑ 2 new postings this week</p>
-          </div>
-
-          <div className="p-6 rounded-2xl bg-slate-900/90 border border-slate-800">
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-slate-400 font-medium">Active Candidates</span>
-              <div className="p-2.5 rounded-xl bg-purple-600/20 text-purple-400">
-                <Users className="w-5 h-5" />
-              </div>
-            </div>
-            <p className="text-3xl font-extrabold text-white mt-4">42</p>
-            <p className="text-xs text-indigo-400 mt-2 font-medium">18 Screened by Gemini AI</p>
-          </div>
-
-          <div className="p-6 rounded-2xl bg-slate-900/90 border border-slate-800">
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-slate-400 font-medium">Interviews Today</span>
-              <div className="p-2.5 rounded-xl bg-amber-600/20 text-amber-400">
-                <Calendar className="w-5 h-5" />
-              </div>
-            </div>
-            <p className="text-3xl font-extrabold text-white mt-4">5</p>
-            <p className="text-xs text-amber-400 mt-2 font-medium">Next: 3:00 PM (Tech Interview)</p>
-          </div>
-
-          <div className="p-6 rounded-2xl bg-slate-900/90 border border-slate-800">
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-slate-400 font-medium">Offer Acceptance</span>
-              <div className="p-2.5 rounded-xl bg-emerald-600/20 text-emerald-400">
-                <FileCheck className="w-5 h-5" />
-              </div>
-            </div>
-            <p className="text-3xl font-extrabold text-white mt-4">92%</p>
-            <p className="text-xs text-emerald-400 mt-2 font-medium">11 Offers Accepted</p>
-          </div>
-        </div>
-
-        {/* Active Jobs Table / Section */}
-        <div className="bg-slate-900/90 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
-          <div className="p-6 border-b border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
-              <h2 className="text-lg font-bold text-white">Active Job Openings</h2>
-              <p className="text-xs text-slate-400">Manage candidate pipelines and job details</p>
+              <span className="text-xs text-slate-500 font-medium block">Candidate Kanban</span>
+              <span className="text-sm font-bold text-slate-900">Manage Pipeline →</span>
             </div>
-            <div className="flex items-center gap-3 w-full sm:w-auto">
-              <div className="relative flex-1 sm:w-64">
-                <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
-                <input
-                  type="text"
-                  placeholder="Filter jobs..."
-                  className="w-full pl-9 pr-4 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
-                />
-              </div>
+          </Link>
+
+          <Link
+            href="/dashboard/recruiter/interviews"
+            className="p-5 rounded-2xl bg-white border border-slate-200 hover:border-rose-900/40 shadow-sm transition-all flex items-center gap-4 group"
+          >
+            <div className="w-10 h-10 rounded-xl bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-900 font-bold group-hover:bg-rose-900 group-hover:text-white transition-colors">
+              <Calendar className="w-5 h-5" />
             </div>
+            <div>
+              <span className="text-xs text-slate-500 font-medium block">Interview Schedule</span>
+              <span className="text-sm font-bold text-slate-900">Google Meet Invites →</span>
+            </div>
+          </Link>
+
+          <Link
+            href="/dashboard/recruiter/assessments"
+            className="p-5 rounded-2xl bg-white border border-slate-200 hover:border-rose-900/40 shadow-sm transition-all flex items-center gap-4 group"
+          >
+            <div className="w-10 h-10 rounded-xl bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-900 font-bold group-hover:bg-rose-900 group-hover:text-white transition-colors">
+              <Code2 className="w-5 h-5" />
+            </div>
+            <div>
+              <span className="text-xs text-slate-500 font-medium block">Coding Tests</span>
+              <span className="text-sm font-bold text-slate-900">Anti-Cheat Suite →</span>
+            </div>
+          </Link>
+
+          <Link
+            href="/dashboard/recruiter/offers"
+            className="p-5 rounded-2xl bg-white border border-slate-200 hover:border-rose-900/40 shadow-sm transition-all flex items-center gap-4 group"
+          >
+            <div className="w-10 h-10 rounded-xl bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-900 font-bold group-hover:bg-rose-900 group-hover:text-white transition-colors">
+              <FileText className="w-5 h-5" />
+            </div>
+            <div>
+              <span className="text-xs text-slate-500 font-medium block">Offer Letters</span>
+              <span className="text-sm font-bold text-slate-900">Generate Offers →</span>
+            </div>
+          </Link>
+        </div>
+
+        {/* Active Requisitions Table */}
+        <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+          <div className="p-5 border-b border-slate-200 flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Active Job Requisitions</h3>
+              <p className="text-xs text-slate-500">List of published job openings and applicant counts</p>
+            </div>
+            <span className="px-2.5 py-1 rounded-md bg-slate-100 border border-slate-200 text-xs font-bold text-slate-700">
+              {jobs.length} Active Openings
+            </span>
           </div>
 
           {loading ? (
-            <div className="p-12 text-center text-slate-500 text-sm">Loading job listings...</div>
+            <div className="p-12 text-center text-slate-500 text-sm">Loading requisitions...</div>
           ) : jobs.length === 0 ? (
-            <div className="p-12 text-center text-slate-400">
-              <Briefcase className="w-12 h-12 text-slate-600 mx-auto mb-3" />
-              <p className="font-semibold text-white">No job postings created yet</p>
-              <p className="text-xs text-slate-500 mt-1">Click "Post New Job" above to create your first posting.</p>
+            <div className="p-12 text-center text-slate-500 text-sm">
+              No active job requisitions found. Click "Post New Requisition" to create one.
             </div>
           ) : (
-            <div className="divide-y divide-slate-800/60">
-              {jobs.map((job) => (
-                <div key={job.id} className="p-6 hover:bg-slate-850/50 transition-colors flex flex-col md:flex-row md:items-center justify-between gap-4">
-                  <div className="space-y-1.5">
-                    <div className="flex items-center gap-3">
-                      <h3 className="text-base font-bold text-white">{job.title}</h3>
-                      <span className="px-2 py-0.5 rounded-md bg-emerald-950/80 border border-emerald-800 text-emerald-300 text-[10px] font-semibold">
-                        {job.status}
-                      </span>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-4 text-xs text-slate-400">
-                      <span className="flex items-center gap-1">
-                        <Building2 className="w-3.5 h-3.5 text-indigo-400" />
-                        {job.department}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <MapPin className="w-3.5 h-3.5 text-purple-400" />
+            <div className="overflow-x-auto custom-scrollbar">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-50 text-slate-500 uppercase tracking-wider text-[10px] font-bold border-b border-slate-200">
+                  <tr>
+                    <th className="p-4">Position Title</th>
+                    <th className="p-4">Department</th>
+                    <th className="p-4">Location & Mode</th>
+                    <th className="p-4">Applicants</th>
+                    <th className="p-4">Salary Range</th>
+                    <th className="p-4 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {jobs.map((job) => (
+                    <tr key={job.id} className="hover:bg-slate-50 transition-colors">
+                      <td className="p-4 font-bold text-slate-900">{job.title}</td>
+                      <td className="p-4 text-slate-600 font-medium">{job.department}</td>
+                      <td className="p-4 text-slate-600">
                         {job.location} ({job.workMode})
-                      </span>
-                      {job.salaryMin && (
-                        <span className="flex items-center gap-1 text-slate-300">
-                          <DollarSign className="w-3.5 h-3.5 text-emerald-400" />
-                          ${job.salaryMin.toLocaleString()} - ${job.salaryMax?.toLocaleString()}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-3">
-                    <Link
-                      href={`/dashboard/recruiter/candidates?jobId=${job.id}`}
-                      className="px-4 py-2 rounded-xl bg-indigo-600/20 border border-indigo-500/30 text-indigo-300 hover:bg-indigo-600 hover:text-white font-semibold text-xs transition-all flex items-center gap-1.5"
-                    >
-                      <Users className="w-3.5 h-3.5" />
-                      View Applicants Kanban
-                    </Link>
-                  </div>
-                </div>
-              ))}
+                      </td>
+                      <td className="p-4 font-bold text-rose-900">
+                        {job.applications?.length || 0} Candidates
+                      </td>
+                      <td className="p-4 text-slate-600">
+                        {job.salaryMin ? `$${job.salaryMin.toLocaleString()} - $${job.salaryMax?.toLocaleString()}` : 'N/A'}
+                      </td>
+                      <td className="p-4 text-right">
+                        <Link
+                          href="/dashboard/recruiter/candidates"
+                          className="px-3 py-1.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-900 font-bold hover:bg-rose-900 hover:text-white transition-all text-xs"
+                        >
+                          View Applicants →
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </div>
 
-        {/* Create Job Modal */}
-        {showPostingModal && (
-          <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-2xl w-full p-6 sm:p-8 max-h-[90vh] overflow-y-auto shadow-2xl relative">
-              <div className="flex items-center justify-between pb-4 border-b border-slate-800 mb-6">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold">
-                    <Sparkles className="w-4 h-4" />
-                  </div>
-                  <h2 className="text-xl font-bold text-white">Create New Job Posting</h2>
-                </div>
-                <button
-                  onClick={() => setShowPostingModal(false)}
-                  className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
+        {/* Create Requisition Modal */}
+        {showCreateModal && (
+          <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-white border border-slate-200 rounded-2xl max-w-xl w-full p-6 sm:p-8 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto custom-scrollbar">
+              <h3 className="text-lg font-bold text-slate-900 border-b border-slate-100 pb-3">
+                Post New Job Requisition
+              </h3>
 
               <form onSubmit={handleCreateJob} className="space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">Job Title *</label>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Job Title *</label>
                   <input
                     type="text"
                     required
-                    value={jobTitle}
-                    onChange={(e) => setJobTitle(e.target.value)}
-                    placeholder="e.g. Senior Full Stack Engineer"
-                    className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm focus:border-indigo-500 focus:outline-none"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    placeholder="e.g. Senior Software Engineer"
+                    className="w-full px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs focus:border-rose-900 focus:outline-none"
                   />
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-300 mb-1">Department *</label>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">Department *</label>
                     <input
                       type="text"
                       required
                       value={department}
                       onChange={(e) => setDepartment(e.target.value)}
-                      placeholder="e.g. Engineering"
-                      className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm focus:border-indigo-500 focus:outline-none"
+                      placeholder="Engineering"
+                      className="w-full px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs focus:border-rose-900 focus:outline-none"
                     />
                   </div>
-
                   <div>
-                    <label className="block text-xs font-semibold text-slate-300 mb-1">Location *</label>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">Location *</label>
                     <input
                       type="text"
                       required
                       value={location}
                       onChange={(e) => setLocation(e.target.value)}
-                      placeholder="e.g. San Francisco, CA / Remote"
-                      className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm focus:border-indigo-500 focus:outline-none"
+                      placeholder="San Francisco, CA"
+                      className="w-full px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs focus:border-rose-900 focus:outline-none"
                     />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-300 mb-1">Min Salary ($)</label>
-                    <input
-                      type="number"
-                      value={salaryMin}
-                      onChange={(e) => setSalaryMin(e.target.value)}
-                      placeholder="100000"
-                      className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm focus:border-indigo-500 focus:outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-300 mb-1">Max Salary ($)</label>
-                    <input
-                      type="number"
-                      value={salaryMax}
-                      onChange={(e) => setSalaryMax(e.target.value)}
-                      placeholder="150000"
-                      className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm focus:border-indigo-500 focus:outline-none"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-300 mb-1">Work Mode</label>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">Work Mode</label>
                     <select
                       value={workMode}
                       onChange={(e) => setWorkMode(e.target.value)}
-                      className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm focus:border-indigo-500 focus:outline-none"
+                      className="w-full px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs focus:border-rose-900 focus:outline-none"
                     >
-                      <option value="HYBRID">Hybrid</option>
                       <option value="REMOTE">Remote</option>
-                      <option value="ON_SITE">On-Site</option>
+                      <option value="HYBRID">Hybrid</option>
+                      <option value="ON_SITE">On Site</option>
                     </select>
                   </div>
-
                   <div>
-                    <label className="block text-xs font-semibold text-slate-300 mb-1">Employment Type</label>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">Employment Type</label>
                     <select
-                      value={employmentType}
-                      onChange={(e) => setEmploymentType(e.target.value)}
-                      className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm focus:border-indigo-500 focus:outline-none"
+                      value={type}
+                      onChange={(e) => setType(e.target.value)}
+                      className="w-full px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs focus:border-rose-900 focus:outline-none"
                     >
                       <option value="FULL_TIME">Full Time</option>
                       <option value="PART_TIME">Part Time</option>
                       <option value="CONTRACT">Contract</option>
-                      <option value="INTERNSHIP">Internship</option>
                     </select>
                   </div>
                 </div>
 
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">Salary Min ($)</label>
+                    <input
+                      type="number"
+                      value={salaryMin}
+                      onChange={(e) => setSalaryMin(e.target.value)}
+                      placeholder="120000"
+                      className="w-full px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs focus:border-rose-900 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">Salary Max ($)</label>
+                    <input
+                      type="number"
+                      value={salaryMax}
+                      onChange={(e) => setSalaryMax(e.target.value)}
+                      placeholder="160000"
+                      className="w-full px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs focus:border-rose-900 focus:outline-none"
+                    />
+                  </div>
+                </div>
+
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">Required Skills (comma separated)</label>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Skills Required (Comma separated)</label>
                   <input
                     type="text"
                     value={skillsRequired}
                     onChange={(e) => setSkillsRequired(e.target.value)}
-                    placeholder="React, Next.js, Node.js, TypeScript, MongoDB"
-                    className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm focus:border-indigo-500 focus:outline-none"
+                    placeholder="React, TypeScript, Node.js, Next.js"
+                    className="w-full px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs focus:border-rose-900 focus:outline-none"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">Job Description *</label>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Description *</label>
                   <textarea
                     rows={4}
                     required
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
-                    placeholder="Provide responsibilities, requirements, and benefits..."
-                    className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm focus:border-indigo-500 focus:outline-none"
+                    placeholder="Detailed job requisition responsibilities..."
+                    className="w-full px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs focus:border-rose-900 focus:outline-none"
                   />
                 </div>
 
-                <div className="pt-4 flex items-center justify-end gap-3">
+                <div className="pt-4 flex items-center justify-end gap-3 border-t border-slate-100">
                   <button
                     type="button"
-                    onClick={() => setShowPostingModal(false)}
-                    className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold"
+                    onClick={() => setShowCreateModal(false)}
+                    className="px-4 py-2 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 text-xs font-semibold"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    disabled={postingLoading}
-                    className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-lg shadow-indigo-600/30"
+                    disabled={creating}
+                    className="px-5 py-2 rounded-xl bg-rose-900 hover:bg-rose-800 text-white text-xs font-bold shadow-sm"
                   >
-                    {postingLoading ? 'Publishing...' : 'Publish Job'}
+                    {creating ? 'Creating...' : 'Publish Job Opening'}
                   </button>
                 </div>
               </form>
@@ -415,5 +402,13 @@ export default function RecruiterDashboard() {
 
       <Footer />
     </div>
+  );
+}
+
+export default function RecruiterDashboardPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-slate-50 text-slate-900 p-10">Loading Recruiter Command Center...</div>}>
+      <RecruiterDashboardContent />
+    </Suspense>
   );
 }

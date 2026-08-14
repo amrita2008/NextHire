@@ -9,25 +9,9 @@ services:
     ports:
       - '3000:3000'
     environment:
-      - DATABASE_URL=mongodb://mongodb:27017/nexthire?replicaSet=rs0
-      - JWT_SECRET=devfusion_ats_ai_hackathon_super_secret_jwt_key_2026
+      - NODE_ENV=production
+      - PORT=3000
+      - DATABASE_URL=mongodb+srv://demo:demo@cluster0.mongodb.net/nexthire_db
+      - JWT_SECRET=nexthire_super_secret_jwt_key_2026
       - GEMINI_API_KEY=${GEMINI_API_KEY}
-    depends_on:
-      - mongodb
-
-  mongodb:
-    image: mongo:6.0
-    container_name: nexthire-mongodb
-    ports:
-      - '27017:27017'
-    command: mongod --replSet rs0 --bind_ip_all
-    volumes:
-      - mongo-data:/data/db
-    healthcheck:
-      test: mongosh --eval "try { rs.status().ok } catch (err) { rs.initiate({_id:'rs0',members:[{_id:0,host:'localhost:27017'}]}); }"
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
-volumes:
-  mongo-data:
+    restart: always

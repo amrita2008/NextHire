@@ -1,68 +1,63 @@
+'use client';
+
 import React from 'react';
 import Link from 'next/link';
-import { Sparkles, Github, Twitter, Linkedin, Mail } from 'lucide-react';
 
 export default function Footer() {
   return (
-    <footer className="bg-slate-950 border-t border-slate-900 pt-16 pb-12 text-slate-400 text-sm">
+    <footer className="bg-slate-900 text-slate-300 py-12 border-t border-slate-800">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-10 pb-12 border-b border-slate-900">
-          <div className="md:col-span-2 space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+          <div className="space-y-3">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold">
-                <Sparkles className="w-4 h-4" />
+              <div className="w-7 h-7 rounded-lg bg-rose-800 flex items-center justify-center text-white font-bold text-sm">
+                N
               </div>
-              <span className="text-lg font-bold text-white">TalentPulse.AI</span>
+              <span className="text-lg font-bold text-white tracking-tight">
+                Next<span className="text-rose-400">Hire</span>
+              </span>
             </div>
-            <p className="text-slate-400 max-w-sm leading-relaxed">
-              Enterprise-grade AI Applicant Tracking System empowering recruiting teams to parse resumes, match top candidates, schedule interviews, and make data-driven hiring decisions.
+            <p className="text-xs text-slate-400 leading-relaxed">
+              Enterprise Applicant Tracking & AI Hiring Platform. Streamlining candidate sourcing, interview scheduling, live coding assessments, and offer letters.
             </p>
-            <div className="flex items-center gap-4 pt-2">
-              <a href="#" className="p-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white transition-colors">
-                <Github className="w-4 h-4" />
-              </a>
-              <a href="#" className="p-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white transition-colors">
-                <Twitter className="w-4 h-4" />
-              </a>
-              <a href="#" className="p-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white transition-colors">
-                <Linkedin className="w-4 h-4" />
-              </a>
-            </div>
           </div>
 
           <div>
-            <h4 className="text-white font-semibold mb-4">Product</h4>
-            <ul className="space-y-2.5">
-              <li><Link href="/#features" className="hover:text-white transition-colors">AI Resume Parser</Link></li>
+            <h4 className="text-xs font-bold text-white uppercase tracking-wider mb-3">Product Platform</h4>
+            <ul className="space-y-2 text-xs text-slate-400">
+              <li><Link href="/careers" className="hover:text-white transition-colors">Careers Portal</Link></li>
+              <li><Link href="/#features" className="hover:text-white transition-colors">AI Resume Matcher</Link></li>
               <li><Link href="/#features" className="hover:text-white transition-colors">Kanban Pipeline</Link></li>
               <li><Link href="/#features" className="hover:text-white transition-colors">Coding Assessments</Link></li>
-              <li><Link href="/#pricing" className="hover:text-white transition-colors">Pricing Plans</Link></li>
             </ul>
           </div>
 
           <div>
-            <h4 className="text-white font-semibold mb-4">Solutions</h4>
-            <ul className="space-y-2.5">
-              <li><Link href="/careers" className="hover:text-white transition-colors">Public Careers Portal</Link></li>
-              <li><Link href="/login" className="hover:text-white transition-colors">Recruiter Dashboard</Link></li>
-              <li><Link href="/register" className="hover:text-white transition-colors">Candidate Portal</Link></li>
-              <li><Link href="/login" className="hover:text-white transition-colors">Admin Portal</Link></li>
-            </ul>
+            <div className="space-y-2 text-xs text-slate-400">
+              <h4 className="text-xs font-bold text-white uppercase tracking-wider mb-3">Developer & Security</h4>
+              <li><Link href="/docs" className="hover:text-white transition-colors">OpenAPI Swagger Specs</Link></li>
+              <li><span className="text-slate-400">Google Meet Integration</span></li>
+              <li><span className="text-slate-400">Anti-Cheat Security Audit</span></li>
+            </div>
           </div>
 
           <div>
-            <h4 className="text-white font-semibold mb-4">Hackathon Info</h4>
-            <p className="text-xs text-slate-500 mb-2">DevFusion 4.O Hackathon Project</p>
-            <p className="text-xs text-slate-500">Problem Statement 2: AI-Powered Recruitment & ATS</p>
+            <h4 className="text-xs font-bold text-white uppercase tracking-wider mb-3">Enterprise Support</h4>
+            <p className="text-xs text-slate-400 leading-relaxed mb-2">
+              Need custom ATS integrations or dedicated hiring pipelines?
+            </p>
+            <Link href="/register" className="inline-block text-xs font-bold text-rose-400 hover:text-rose-300">
+              Contact Enterprise Sales →
+            </Link>
           </div>
         </div>
 
-        <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
-          <p>© 2026 TalentPulse.AI. Built for DevFusion 4.O Hackathon. All rights reserved.</p>
-          <div className="flex items-center gap-6">
-            <a href="#" className="hover:text-slate-400">Privacy Policy</a>
-            <a href="#" className="hover:text-slate-400">Terms of Service</a>
-            <a href="#" className="hover:text-slate-400">Security Audit</a>
+        <div className="pt-8 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-4">
+          <p>© {new Date().getFullYear()} NextHire Platform. All rights reserved.</p>
+          <div className="flex gap-6">
+            <Link href="/" className="hover:text-slate-400">Privacy Policy</Link>
+            <Link href="/" className="hover:text-slate-400">Terms of Service</Link>
+            <Link href="/docs" className="hover:text-slate-400">API Specs</Link>
           </div>
         </div>
       </div>
